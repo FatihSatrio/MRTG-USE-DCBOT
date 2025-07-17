@@ -83,6 +83,7 @@ MONITOR_INTERFACE=ether1
 
 CHECK_INTERVAL=10000          # Interval cek status UP/DOWN (ms)
 LOG_POLL_INTERVAL=30000       # Interval polling log (ms)
+IDENTITY_REFRESH_INTERVAL=60000  # Interval identity (ms)
 ```
 
 > 🎯 **Tips:** Untuk ID channel Discord, klik kanan channel → **Copy ID** (Developer Mode harus aktif).
