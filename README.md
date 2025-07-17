@@ -1,3 +1,15 @@
+```📡 MikroTik Discord Monitor Bot
+Monitor perangkat MikroTik RouterOS secara real-time melalui Discord Bot dengan fitur:
+
+✅ Status UP/DOWN MikroTik
+
+📊 Monitoring Bandwidth TX / RX
+
+📝 Realtime MikroTik Logs
+
+🔔 Tag @everyone saat Router DOWN/UP
+```
+```
 📡 MikroTik Discord Monitor Bot
 Monitor perangkat MikroTik RouterOS secara real-time melalui Discord Bot dengan fitur:
 
@@ -8,18 +20,8 @@ Monitor perangkat MikroTik RouterOS secara real-time melalui Discord Bot dengan 
 📝 Realtime MikroTik Logs
 
 🔔 Tag @everyone saat Router DOWN/UP
-
-📡 MikroTik Discord Monitor Bot
-Monitor perangkat MikroTik RouterOS secara real-time melalui Discord Bot dengan fitur:
-
-✅ Status UP/DOWN MikroTik
-
-📊 Monitoring Bandwidth TX / RX
-
-📝 Realtime MikroTik Logs
-
-🔔 Tag @everyone saat Router DOWN/UP
-
+```
+```
 🚀 Cara Install
 1. Clone Project
 bash
@@ -51,3 +53,4 @@ MONITOR_INTERFACE=ether1
 CHECK_INTERVAL=10000          # Interval cek status UP/DOWN (ms)
 LOG_POLL_INTERVAL=30000       # Interval polling log (ms)
 🎯 Tips: Untuk ID channel Discord, klik kanan channel → Copy ID (Developer Mode harus aktif).
+```
