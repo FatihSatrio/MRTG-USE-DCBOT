@@ -112,29 +112,13 @@ pm2 stop mikrotik-bot
 
 | Status       | Preview                                                        |
 | ------------ | -------------------------------------------------------------- |
-| ✅ UP         | ![UP Example](https://i.imgur.com/UpExample.png)               |
-| 🔴 DOWN      | ![DOWN Example](https://i.imgur.com/DownExample.png)           |
-| 📱 Bandwidth | ![Bandwidth Example](https://i.imgur.com/BandwidthExample.png) |
-| 📜 Logs      | ![Logs Example](https://i.imgur.com/LogsExample.png)           |
-
----
-
-## 🤝 Contribute
-
-1. Fork repository ini.
-2. Buat branch baru: `git checkout -b feature-xyz`.
-3. Commit perubahanmu.
-4. Push & buat Pull Request.
+| ✅ UP / 🔴 DOWN | ![UP/DOWN Example]([https://i.imgur.com/UpExample.png](https://cdn.discordapp.com/attachments/1250790910556635169/1395438571069898762/image.png?ex=687a72f1&is=68792171&hm=5d82b0a1f6320d478b0a438f8def98e959c3a847624d0cd7c17017b1cd6db6bb&))               |
+| 📱 Bandwidth | ![Bandwidth Example]([https://i.imgur.com/BandwidthExample.png](https://cdn.discordapp.com/attachments/1250790910556635169/1395438850083655761/image.png?ex=687a7333&is=687921b3&hm=f80cc4f669ebdd200520a0793892c0c20401cc2b4ba6f82a02b1bf21efe1e2f8&)) |
+| 📜 Logs      | ![Logs Example]([https://i.imgur.com/LogsExample.png](https://cdn.discordapp.com/attachments/1250790910556635169/1395438969185108026/image.png?ex=687a7350&is=687921d0&hm=3a095f6de987f3cc7ca22e39a642eb989917d1a2f7e074c6a8b6595b5d0e2dc2&))           |
 
 ---
 
 ## 📞 Kontak & Support
 
-* 📧 Email: [your.email@example.com](mailto:your.email@example.com)
-* 💬 Discord: yourdiscord#1234
-
----
-
-## 📜 License
-
-Distributed under the **MIT License**. See the [LICENSE](LICENSE) file for more info.
+* 📧 Email: [fatih.satrio.as@gmail.com](mailto:fatih.satrio.as@gmail.com)
+* 💬 Discord: notmoonn
