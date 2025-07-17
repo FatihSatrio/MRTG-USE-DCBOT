@@ -8,6 +8,7 @@ const client = new Client({
 
 let mikrotikConnection;
 let mikrotikStatus = 'unknown';
+let mikrotikIdentity = 'Unknown Identity';
 let monitoringChannel, logChannel, bandwidthChannel;
 let lastLogId = null;
 
@@ -29,10 +30,30 @@ async function connectMikrotik() {
   try {
     await mikrotikConnection.connect();
     console.log('✅ Connected to MikroTik!');
+    await fetchIdentity();
   } catch (err) {
     console.error('Failed to connect to MikroTik:', err);
     console.log('Retrying in 5 seconds...');
     setTimeout(connectMikrotik, 5000);
+  }
+}
+
+async function fetchIdentity() {
+  if (!mikrotikConnection.connected) return;
+  try {
+    const identity = await mikrotikConnection.write('/system/identity/print');
+    if (identity && identity.length > 0) {
+      mikrotikIdentity = identity[0].name;
+      console.log(`✅ Fetched MikroTik Identity: ${mikrotikIdentity}`);
+
+      // Update Discord presence
+      client.user.setPresence({
+        activities: [{ name: `MikroTik: ${mikrotikIdentity}`, type: 3 }],
+        status: 'online'
+      });
+    }
+  } catch (err) {
+    console.error('Failed to fetch MikroTik identity:', err);
   }
 }
 
@@ -67,38 +88,32 @@ async function monitorMikrotik() {
 function sendMikrotikUpAlert(info) {
   const embed = new EmbedBuilder()
     .setTitle('🟢 MikroTik is BACK ONLINE')
-    .setDescription('Perangkat MikroTik telah kembali **ONLINE** dan dapat diakses seperti biasa.')
+    .setDescription('Perangkat MikroTik telah kembali **ONLINE**.')
     .addFields(
+      { name: '🏷️ Identity', value: mikrotikIdentity, inline: true },
       { name: '📅 Tanggal & Waktu', value: getLocalDateTime(), inline: false },
       { name: '🕒 Uptime', value: info.uptime, inline: true },
       { name: '💻 CPU Load', value: `${info['cpu-load']}%`, inline: true },
       { name: '🧠 Free Memory', value: formatMemory(info['free-memory']), inline: true }
     )
     .setColor('Green')
-    .setFooter({ text: 'Status diperbarui otomatis oleh Monitoring Bot' })
     .setTimestamp();
 
-  monitoringChannel.send({
-    content: '@everyone ✅ **MikroTik Telah Kembali Online!**',
-    embeds: [embed]
-  });
+  monitoringChannel.send({ content: '@everyone ✅ **MikroTik Kembali Online!**', embeds: [embed] });
 }
 
 function sendMikrotikDownAlert() {
   const embed = new EmbedBuilder()
     .setTitle('🔴 MikroTik is OFFLINE')
-    .setDescription('🚨 **ALERT!**\nPerangkat MikroTik **TIDAK DAPAT DIAKSES**. Mohon segera cek koneksi atau perangkat fisik.\n\n❗ **Segera lakukan pemeriksaan!**')
+    .setDescription('🚨 MikroTik tidak dapat diakses. Segera periksa perangkat!')
     .addFields(
+      { name: '🏷️ Identity', value: mikrotikIdentity, inline: true },
       { name: '📅 Tanggal & Waktu', value: getLocalDateTime(), inline: false }
     )
     .setColor('Red')
-    .setFooter({ text: 'Status diperbarui otomatis oleh Monitoring Bot' })
     .setTimestamp();
 
-  monitoringChannel.send({
-    content: '@everyone 🚨 **MikroTik Saat Ini OFFLINE!**',
-    embeds: [embed]
-  });
+  monitoringChannel.send({ content: '@everyone 🚨 **MikroTik Saat Ini OFFLINE!**', embeds: [embed] });
 }
 
 async function monitorBandwidth() {
@@ -119,6 +134,7 @@ async function monitorBandwidth() {
       const embed = new EmbedBuilder()
         .setTitle(`📡 Bandwidth Monitor: ${interfaceName}`)
         .addFields(
+          { name: '🏷️ Identity', value: mikrotikIdentity, inline: true },
           { name: '📤 TX (Upload)', value: `${formatBits(currentTx)}/s`, inline: true },
           { name: '📥 RX (Download)', value: `${formatBits(currentRx)}/s`, inline: true },
           { name: '📅 Tanggal & Waktu', value: getLocalDateTime(), inline: false }
@@ -149,20 +165,16 @@ async function pollLogs() {
       lastLogId = newLogs[newLogs.length - 1]['.id'];
 
       newLogs.forEach(logEntry => {
-        const message = logEntry.message || 'No Message';
-        const topics = logEntry.topics || 'No Topic';
-        const routerTime = logEntry.time || 'Unknown';
-        const dateTime = getLocalDateTime();
-
         const embed = new EmbedBuilder()
           .setTitle('📝 MikroTik Log Entry')
           .addFields(
-            { name: '📅 Tanggal Lokal', value: dateTime, inline: true },
-            { name: '🕐 Waktu Router', value: routerTime, inline: true },
-            { name: '🏷️ Topics', value: `\`${topics}\``, inline: false },
-            { name: '💬 Message', value: `\`\`\`${message}\`\`\``, inline: false }
+            { name: '🏷️ Identity', value: mikrotikIdentity, inline: true },
+            { name: '📅 Tanggal Lokal', value: getLocalDateTime(), inline: true },
+            { name: '🕐 Waktu Router', value: logEntry.time || 'Unknown', inline: true },
+            { name: '🏷️ Topics', value: `\`${logEntry.topics || 'No Topic'}\``, inline: false },
+            { name: '💬 Message', value: `\`\`\`${logEntry.message || 'No Message'}\`\`\``, inline: false }
           )
-          .setColor(getLogColor(topics))
+          .setColor(getLogColor(logEntry.topics))
           .setTimestamp();
 
         logChannel.send({ embeds: [embed] });
@@ -174,31 +186,29 @@ async function pollLogs() {
 }
 
 function getLogColor(topics) {
-  if (!topics) return 0x95a5a6; // Grey for unknown
-
-  if (topics.includes('error')) return 0xe74c3c;       // Red
-  if (topics.includes('warning')) return 0xf39c12;     // Orange
-  if (topics.includes('info')) return 0x3498db;        // Blue
-  if (topics.includes('debug')) return 0x9b59b6;       // Purple
-  if (topics.includes('system')) return 0x2ecc71;      // Green
-
-  return 0x95a5a6; // Default grey
+  if (!topics) return 0x95a5a6;
+  if (topics.includes('error')) return 0xe74c3c;
+  if (topics.includes('warning')) return 0xf39c12;
+  if (topics.includes('info')) return 0x3498db;
+  if (topics.includes('debug')) return 0x9b59b6;
+  if (topics.includes('system')) return 0x2ecc71;
+  return 0x95a5a6;
 }
 
 function formatBits(bits) {
-  if (bits === 0 || isNaN(bits)) return '0 bps';
+  if (!bits) return '0 bps';
   const k = 1000;
   const sizes = ['bps', 'Kbps', 'Mbps', 'Gbps', 'Tbps'];
   const i = Math.floor(Math.log(bits) / Math.log(k));
-  return parseFloat((bits / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  return (bits / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i];
 }
 
 function formatMemory(bytes) {
-  if (bytes === 0 || isNaN(bytes)) return '0 B';
+  if (!bytes) return '0 B';
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i];
 }
 
 function getLocalDateTime() {
@@ -213,7 +223,7 @@ client.once('ready', async () => {
   bandwidthChannel = client.channels.cache.get(process.env.DISCORD_BANDWIDTH_CHANNEL_ID);
 
   if (!monitoringChannel || !logChannel || !bandwidthChannel) {
-    console.error('One or more Discord channels not found. Please check .env channel IDs.');
+    console.error('❌ Channel not found. Please check channel IDs.');
     return;
   }
 
@@ -221,6 +231,7 @@ client.once('ready', async () => {
 
   setInterval(monitorMikrotik, parseInt(process.env.CHECK_INTERVAL));
   setInterval(pollLogs, parseInt(process.env.LOG_POLL_INTERVAL));
+  setInterval(fetchIdentity, 60000); // refresh identity tiap 1 menit
 });
 
 client.login(process.env.DISCORD_TOKEN);
