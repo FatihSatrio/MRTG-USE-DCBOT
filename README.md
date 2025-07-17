@@ -68,7 +68,7 @@ LOG_POLL_INTERVAL=30000       # Interval polling log (ms)
 ### 🔹 Mode Development
 
 ```bash
-node index.js
+npm start
 ```
 
 ---
@@ -103,7 +103,6 @@ pm2 stop mikrotik-bot
 ## 🛡️ Keamanan
 
 * 🔒 Gunakan akun MikroTik khusus untuk monitoring dengan akses terbatas.
-* 🚫 Jangan commit file `.env` ke repo publik.
 * 🔐 Batasi akses channel Discord hanya untuk admin atau role tertentu.
 
 ---
