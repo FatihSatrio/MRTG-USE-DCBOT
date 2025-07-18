@@ -85,7 +85,7 @@ async function monitorMikrotik() {
 }
 
 function checkCpuUsage(cpuLoad) {
-  const threshold = 70;
+  const threshold = process.env.MAX_BANDWIDTH_MBPS;
   if (cpuLoad >= threshold) {
     const embed = new EmbedBuilder()
       .setTitle('⚠️ CPU Load Warning')
