@@ -34,7 +34,7 @@
 1. **Clone Repository**
 
 ```bash
-git clone https://github.com/USERNAME/MRTG-USE-DCBOT.git
+git clone https://github.com/FatihSatrio/MRTG-USE-DCBOT.git
 cd MRTG-USE-DCBOT
 ```
 
