@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, EmbedBuilder, Embed } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const { RouterOSAPI } = require('node-routeros');
 
 const client = new Client({
@@ -59,9 +59,7 @@ async function fetchIdentity() {
 
 async function monitorMikrotik() {
   if (!mikrotikConnection.connected) {
-    if (mikrotikStatus !== 'down') {
-      mikrotikStatus = 'down';
-    }
+    if (mikrotikStatus !== 'down') mikrotikStatus = 'down';
     sendMikrotikDownAlert();
     return;
   }
@@ -85,7 +83,7 @@ async function monitorMikrotik() {
 }
 
 function checkCpuUsage(cpuLoad) {
-  const threshold = process.env.CPU_THRESHOLD;
+  const threshold = parseInt(process.env.CPU_THRESHOLD);
   if (cpuLoad >= threshold) {
     const embed = new EmbedBuilder()
       .setTitle('⚠️ CPU Load Warning')
@@ -137,7 +135,7 @@ async function monitorBandwidth() {
 
   try {
     const interfaceName = process.env.MONITOR_INTERFACE;
-    const maxBandwidth = parseInt(process.env.MAX_BANDWIDTH_MBPS); // Mbps
+    const maxBandwidth = parseInt(process.env.MAX_BANDWIDTH_MBPS);
     const traffic = await mikrotikConnection.write('/interface/monitor-traffic', [
       `=interface=${interfaceName}`,
       '=once='
@@ -162,20 +160,19 @@ async function monitorBandwidth() {
       bandwidthChannel.send({ embeds: [embed] });
 
       if (txMbps >= maxBandwidth || rxMbps >= maxBandwidth) {
-
-        const embed = new EmbedBuilder()
-        .setTitle('🚨 Bandwidth Alert!')
-        .setDescription('🚨 Bandwidth melebihi batas yang ditentukan!')
-        .addFields(
-          { name: '🏷️ Identity', value: mikrotikIdentity, inline: true },
-          { name: '📡 Interface', value: `${interfaceName}`, inline: true },
-          { name: '📤 TX (Upload)', value: `${txMbps} Mbps`, inline: true },
-          { name: '📥 RX (Download)', value: `${rxMbps} Mbps`, inline: true },
-          { name: '📅 Tanggal & Waktu', value: getLocalDateTime(), inline: false }
-        )
-        .setColor('Red')
-        .setTimestamp();
-        bandwidthChannel.send({ content: `${mentionUsers} 🚨 **Bandwidth Alert!**`, embeds: [embed] });
+        const alertEmbed = new EmbedBuilder()
+          .setTitle('🚨 Bandwidth Alert!')
+          .setDescription('🚨 Bandwidth melebihi batas yang ditentukan!')
+          .addFields(
+            { name: '🏷️ Identity', value: mikrotikIdentity, inline: true },
+            { name: '📡 Interface', value: `${interfaceName}`, inline: true },
+            { name: '📤 TX (Upload)', value: `${txMbps} Mbps`, inline: true },
+            { name: '📥 RX (Download)', value: `${rxMbps} Mbps`, inline: true },
+            { name: '📅 Tanggal & Waktu', value: getLocalDateTime(), inline: false }
+          )
+          .setColor('Red')
+          .setTimestamp();
+        bandwidthChannel.send({ content: `${mentionUsers} 🚨 **Bandwidth Alert!**`, embeds: [alertEmbed] });
       }
     }
   } catch (err) {
