@@ -74,6 +74,46 @@ node index.js
 ```
 
 ---
+5. **Menjalankan dengan PM2** ⚡
+   Untuk menjaga bot tetap berjalan di background:
+
+```bash
+npm install -g pm2
+pm2 start index.js --name mikrotik-monitor
+```
+
+Untuk memantau log:
+
+```bash
+pm2 logs mikrotik-monitor
+```
+
+Untuk menghentikan bot:
+
+```bash
+pm2 stop mikrotik-monitor
+```
+
+Untuk restart bot:
+
+```bash
+pm2 restart mikrotik-monitor
+```
+
+Untuk daftar semua proses PM2:
+
+```bash
+pm2 list
+```
+
+Untuk auto-start saat reboot server:
+
+```bash
+pm2 startup
+pm2 save
+```
+
+---
 
 ## ⚙️ Penggunaan
 
