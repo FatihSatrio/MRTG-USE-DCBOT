@@ -34,8 +34,8 @@
 1. **Clone Repository**
 
 ```bash
-git clone https://github.com/USERNAME/MIKROTIK-DISCORD-MONITORING.git
-cd MIKROTIK-DISCORD-MONITORING
+git clone https://github.com/USERNAME/MRTG-USE-DCBOT.git
+cd MRTG-USE-DCBOT
 ```
 
 2. **Install Dependencies**
