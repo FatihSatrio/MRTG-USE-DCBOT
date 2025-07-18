@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, Embed } = require('discord.js');
 const { RouterOSAPI } = require('node-routeros');
 
 const client = new Client({
@@ -9,8 +9,12 @@ const client = new Client({
 let mikrotikConnection;
 let mikrotikStatus = 'unknown';
 let mikrotikIdentity = 'Unknown Identity';
-let monitoringChannel, logChannel, bandwidthChannel;
-let lastLogId = null;
+let monitoringChannel, logChannel, systemLogChannel, bandwidthChannel;
+let lastLogTime = null;
+
+const mentionUsers = process.env.DISCORD_MENTION_USER_IDS
+  ? process.env.DISCORD_MENTION_USER_IDS.split(',').map(id => `<@${id.trim()}>`).join(' ')
+  : '';
 
 async function connectMikrotik() {
   if (mikrotikConnection) await mikrotikConnection.close().catch(() => {});
@@ -33,7 +37,6 @@ async function connectMikrotik() {
     await fetchIdentity();
   } catch (err) {
     console.error('Failed to connect to MikroTik:', err);
-    console.log('Retrying in 5 seconds...');
     setTimeout(connectMikrotik, 5000);
   }
 }
@@ -44,9 +47,6 @@ async function fetchIdentity() {
     const identity = await mikrotikConnection.write('/system/identity/print');
     if (identity && identity.length > 0) {
       mikrotikIdentity = identity[0].name;
-      console.log(`✅ Fetched MikroTik Identity: ${mikrotikIdentity}`);
-
-      // Update Discord presence
       client.user.setPresence({
         activities: [{ name: `MikroTik: ${mikrotikIdentity}`, type: 3 }],
         status: 'online'
@@ -75,31 +75,47 @@ async function monitorMikrotik() {
       sendMikrotikUpAlert(info);
     }
 
+    checkCpuUsage(info['cpu-load']);
     await monitorBandwidth();
   } catch (err) {
     console.error('monitorMikrotik error:', err);
-    if (mikrotikStatus !== 'down') {
-      mikrotikStatus = 'down';
-    }
+    if (mikrotikStatus !== 'down') mikrotikStatus = 'down';
     sendMikrotikDownAlert();
+  }
+}
+
+function checkCpuUsage(cpuLoad) {
+  const threshold = 70;
+  if (cpuLoad >= threshold) {
+    const embed = new EmbedBuilder()
+      .setTitle('⚠️ CPU Load Warning')
+      .setDescription(`CPU Load saat ini **${cpuLoad}%** melebihi batas aman ${threshold}%!`)
+      .addFields(
+        { name: '🏷️ Identity', value: mikrotikIdentity, inline: true },
+        { name: '📅 Tanggal & Waktu', value: getLocalDateTime(), inline: false }
+      )
+      .setColor('Orange')
+      .setTimestamp();
+
+    monitoringChannel.send({ content: `${mentionUsers} ⚠️ **CPU Usage High!**`, embeds: [embed] });
   }
 }
 
 function sendMikrotikUpAlert(info) {
   const embed = new EmbedBuilder()
     .setTitle('🟢 MikroTik is BACK ONLINE')
-    .setDescription('Perangkat MikroTik telah kembali **ONLINE**.')
+    .setDescription('Perangkat MikroTik telah kembali **ONLINE.**')
     .addFields(
       { name: '🏷️ Identity', value: mikrotikIdentity, inline: true },
-      { name: '📅 Tanggal & Waktu', value: getLocalDateTime(), inline: false },
       { name: '🕒 Uptime', value: info.uptime, inline: true },
       { name: '💻 CPU Load', value: `${info['cpu-load']}%`, inline: true },
-      { name: '🧠 Free Memory', value: formatMemory(info['free-memory']), inline: true }
+      { name: '🧠 Free Memory', value: formatMemory(info['free-memory']), inline: true },
+      { name: '📅 Tanggal & Waktu', value: getLocalDateTime(), inline: false }
     )
     .setColor('Green')
     .setTimestamp();
 
-  monitoringChannel.send({ content: '@everyone ✅ **MikroTik Kembali Online!**', embeds: [embed] });
+  monitoringChannel.send({ content: `${mentionUsers} ✅ **MikroTik Online!**`, embeds: [embed] });
 }
 
 function sendMikrotikDownAlert() {
@@ -113,7 +129,7 @@ function sendMikrotikDownAlert() {
     .setColor('Red')
     .setTimestamp();
 
-  monitoringChannel.send({ content: '@everyone 🚨 **MikroTik Saat Ini OFFLINE!**', embeds: [embed] });
+  monitoringChannel.send({ content: `${mentionUsers} 🚨 **MikroTik Offline!**`, embeds: [embed] });
 }
 
 async function monitorBandwidth() {
@@ -121,6 +137,7 @@ async function monitorBandwidth() {
 
   try {
     const interfaceName = process.env.MONITOR_INTERFACE;
+    const maxBandwidth = parseInt(process.env.MAX_BANDWIDTH_MBPS); // Mbps
     const traffic = await mikrotikConnection.write('/interface/monitor-traffic', [
       `=interface=${interfaceName}`,
       '=once='
@@ -128,21 +145,38 @@ async function monitorBandwidth() {
 
     if (traffic.length > 0) {
       const iface = traffic[0];
-      const currentTx = parseInt(iface['tx-bits-per-second']);
-      const currentRx = parseInt(iface['rx-bits-per-second']);
+      const txMbps = (parseInt(iface['tx-bits-per-second']) / 1_000_000).toFixed(2);
+      const rxMbps = (parseInt(iface['rx-bits-per-second']) / 1_000_000).toFixed(2);
 
       const embed = new EmbedBuilder()
         .setTitle(`📡 Bandwidth Monitor: ${interfaceName}`)
         .addFields(
           { name: '🏷️ Identity', value: mikrotikIdentity, inline: true },
-          { name: '📤 TX (Upload)', value: `${formatBits(currentTx)}/s`, inline: true },
-          { name: '📥 RX (Download)', value: `${formatBits(currentRx)}/s`, inline: true },
+          { name: '📤 TX (Upload)', value: `${txMbps} Mbps`, inline: true },
+          { name: '📥 RX (Download)', value: `${rxMbps} Mbps`, inline: true },
           { name: '📅 Tanggal & Waktu', value: getLocalDateTime(), inline: false }
         )
         .setColor('Blue')
         .setTimestamp();
 
       bandwidthChannel.send({ embeds: [embed] });
+
+      if (txMbps >= maxBandwidth || rxMbps >= maxBandwidth) {
+
+        const embed = new EmbedBuilder()
+        .setTitle('🚨 Bandwidth Alert!')
+        .setDescription('🚨 Bandwidth melebihi batas yang ditentukan!')
+        .addFields(
+          { name: '🏷️ Identity', value: mikrotikIdentity, inline: true },
+          { name: '📡 Interface', value: `${interfaceName}`, inline: true },
+          { name: '📤 TX (Upload)', value: `${txMbps} Mbps`, inline: true },
+          { name: '📥 RX (Download)', value: `${rxMbps} Mbps`, inline: true },
+          { name: '📅 Tanggal & Waktu', value: getLocalDateTime(), inline: false }
+        )
+        .setColor('Red')
+        .setTimestamp();
+        bandwidthChannel.send({ content: `${mentionUsers} 🚨 **Bandwidth Alert!**`, embeds: [embed] });
+      }
     }
   } catch (err) {
     console.error('monitorBandwidth error:', err);
@@ -154,15 +188,24 @@ async function pollLogs() {
 
   try {
     const logs = await mikrotikConnection.write('/log/print');
-
     let newLogs = [];
+
     for (const logEntry of logs) {
-      if (logEntry['.id'] === lastLogId) break;
-      newLogs.unshift(logEntry);
+      const logTime = logEntry.time;
+      if (!logTime) continue;
+
+      const [hours, minutes, seconds] = logTime.split(':').map(Number);
+      const logSeconds = hours * 3600 + minutes * 60 + seconds;
+
+      if (!lastLogTime || logSeconds > lastLogTime) {
+        newLogs.push(logEntry);
+      }
     }
 
     if (newLogs.length > 0) {
-      lastLogId = newLogs[newLogs.length - 1]['.id'];
+      const latestLog = newLogs[newLogs.length - 1];
+      const [hours, minutes, seconds] = latestLog.time.split(':').map(Number);
+      lastLogTime = hours * 3600 + minutes * 60 + seconds;
 
       newLogs.forEach(logEntry => {
         const embed = new EmbedBuilder()
@@ -177,6 +220,9 @@ async function pollLogs() {
           .setColor(getLogColor(logEntry.topics))
           .setTimestamp();
 
+        if (logEntry.topics?.includes('system')) {
+          systemLogChannel.send({ content: `${mentionUsers}`, embeds: [embed] });
+        }
         logChannel.send({ embeds: [embed] });
       });
     }
@@ -193,14 +239,6 @@ function getLogColor(topics) {
   if (topics.includes('debug')) return 0x9b59b6;
   if (topics.includes('system')) return 0x2ecc71;
   return 0x95a5a6;
-}
-
-function formatBits(bits) {
-  if (!bits) return '0 bps';
-  const k = 1000;
-  const sizes = ['bps', 'Kbps', 'Mbps', 'Gbps', 'Tbps'];
-  const i = Math.floor(Math.log(bits) / Math.log(k));
-  return (bits / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i];
 }
 
 function formatMemory(bytes) {
@@ -220,18 +258,18 @@ client.once('ready', async () => {
 
   monitoringChannel = client.channels.cache.get(process.env.DISCORD_CHANNEL_ID);
   logChannel = client.channels.cache.get(process.env.DISCORD_LOG_CHANNEL_ID);
+  systemLogChannel = client.channels.cache.get(process.env.DISCORD_SYSTEM_LOG_CHANNEL_ID);
   bandwidthChannel = client.channels.cache.get(process.env.DISCORD_BANDWIDTH_CHANNEL_ID);
 
-  if (!monitoringChannel || !logChannel || !bandwidthChannel) {
+  if (!monitoringChannel || !logChannel || !systemLogChannel || !bandwidthChannel) {
     console.error('❌ Channel not found. Please check channel IDs.');
     return;
   }
 
   await connectMikrotik();
-
   setInterval(monitorMikrotik, parseInt(process.env.CHECK_INTERVAL));
   setInterval(pollLogs, parseInt(process.env.LOG_POLL_INTERVAL));
-  setInterval(fetchIdentity, 60000); // refresh identity tiap 1 menit
+  setInterval(fetchIdentity, parseInt(process.env.IDENTITY_REFRESH_INTERVAL));
 });
 
 client.login(process.env.DISCORD_TOKEN);
