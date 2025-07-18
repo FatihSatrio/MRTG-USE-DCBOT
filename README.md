@@ -1,143 +1,91 @@
-# 📡 MikroTik Discord Monitor Bot
+# 📡 MikroTik Discord Monitoring Bot
 
-Monitor perangkat **MikroTik RouterOS** secara **real-time** melalui **Discord Bot** dengan fitur:
-
-* ✅ Status **UP/DOWN MikroTik**
-* 📊 Monitoring **Bandwidth TX / RX**
-* 📝 Realtime **MikroTik Logs**
-* 🔔 **Tag @everyone** saat Router **DOWN/UP**
+🚀 Monitor perangkat MikroTik Anda melalui Discord dengan notifikasi real-time untuk status perangkat, log sistem, bandwidth, dan penggunaan CPU.
 
 ---
 
-## 🛠️ Fitur
+## 📦 Fitur
 
-| Fitur                 | Deskripsi                                                |
-| --------------------- | -------------------------------------------------------- |
-| 🔄 Status UP/DOWN     | Monitoring otomatis & alert jika status berubah          |
-| 📡 Bandwidth Monitor  | TX (Upload) & RX (Download) tiap interface               |
-| 📜 Log Monitoring     | Menampilkan logs terbaru dari MikroTik                   |
-| 📣 Notifikasi Discord | Alert via Discord dengan format **Embed** yang aesthetic |
-| 🕒 Timestamp Lokal    | Semua waktu dicatat dengan zona **Asia/Jakarta**         |
+* 🔍 **Monitoring Status MikroTik**
+
+  * Notifikasi saat perangkat ONLINE / OFFLINE.
+
+* 📝 **MikroTik System Logs**
+
+  * Mengirim log router secara real-time ke channel Discord.
+
+* 📡 **Monitoring Bandwidth**
+
+  * Monitor TX/RX bandwidth dalam Mbps.
+  * Alert jika bandwidth melebihi batas yang ditentukan.
+
+* 💻 **CPU Usage Alert**
+
+  * Peringatan jika CPU MikroTik melebihi threshold (default 70%).
+
+* 🛠️ **Customizable Settings**
+
+  * Konfigurasi monitoring interval & channel Discord melalui `.env`.
 
 ---
 
-## 🚀 Panduan Setup Lengkap
+## 🛠️ Instalasi
 
-### 1️⃣ Inisialisasi Project Node.js
+1. **Clone Repository**
 
 ```bash
-mkdir mikrotik-discord-monitor
-cd mikrotik-discord-monitor
-npm init -y
+git clone https://github.com/USERNAME/MIKROTIK-DISCORD-MONITORING.git
+cd MIKROTIK-DISCORD-MONITORING
 ```
 
----
-
-### 2️⃣ Install Dependency
+2. **Install Dependencies**
 
 ```bash
 npm install discord.js node-routeros dotenv pm2
 ```
 
----
-
-### 3️⃣ Buat Struktur File
+3. **Konfigurasi Environment**
+   Buat file `.env` sesuai template berikut:
 
 ```
-/mikrotik-discord-monitor
-│   index.js
-│   .env
-│   package.json
-```
-
----
-
-### 4️⃣ Buat Bot Discord
-
-1. Buka [Discord Developer Portal](https://discord.com/developers/applications)
-2. Klik **New Application** → Beri nama bot.
-3. Masuk ke **Bot** → **Add Bot** → Yes!
-4. Salin **Token Bot**.
-5. Masuk ke tab **OAuth2 → URL Generator**:
-
-   * Scopes: `bot`, `applications.commands`
-   * Bot Permissions: `Administartor`
-6. Copy link OAuth, buka di browser, dan invite bot ke servermu.
-
----
-
-### 5️⃣ Konfigurasi `.env`
-
-Buat file `.env` di root project:
-
-```env
 DISCORD_TOKEN=your_discord_bot_token
 DISCORD_CHANNEL_ID=channel_id_monitoring
-DISCORD_LOG_CHANNEL_ID=channel_id_logs
+DISCORD_LOG_CHANNEL_ID=channel_id_log
+DISCORD_SYSTEM_LOG_CHANNEL_ID=channel_id_system_log
 DISCORD_BANDWIDTH_CHANNEL_ID=channel_id_bandwidth
+DISCORD_MENTION_USER_IDS=comma_separated_discord_user_ids
 
-MIKROTIK_HOST=IP_AKSES_MIKROTIK
-MIKROTIK_USER=admin
-MIKROTIK_PASS=yourpassword
-MONITOR_INTERFACE=ether1
+MIKROTIK_HOST=router_ip
+MIKROTIK_USER=router_username
+MIKROTIK_PASS=router_password
 
-CHECK_INTERVAL=10000          # Interval cek status UP/DOWN (ms)
-LOG_POLL_INTERVAL=30000       # Interval polling log (ms)
-IDENTITY_REFRESH_INTERVAL=60000  # Interval identity (ms)
+MONITOR_INTERFACE=interface_name
+MAX_BANDWIDTH_MBPS=100
+
+CHECK_INTERVAL=10000 # dalam milidetik (10 detik)
+LOG_POLL_INTERVAL=15000
+IDENTITY_REFRESH_INTERVAL=60000
 ```
 
-> 🎯 **Tips:** Untuk ID channel Discord, klik kanan channel → **Copy ID** (Developer Mode harus aktif).
-
----
-
-### 6️⃣ Tulis Code pada `index.js`
-
-Tulis kode utama untuk monitoring MikroTik, bandwidth, logs, dan notifikasi Discord.
-
----
-
-### 7️⃣ Jalankan Bot
-
-#### Mode Development:
+4. **Jalankan Bot**
 
 ```bash
 node index.js
 ```
 
-#### Jalankan di Background dengan PM2:
+---
 
-```bash
-pm install -g pm2
-pm2 start index.js --name mikrotik-bot
-pm2 save
-pm2 startup
-```
+## ⚙️ Penggunaan
 
-**Command tambahan:**
+* Bot akan mengirimkan:
 
-```bash
-pm2 logs mikrotik-bot
-pm2 restart mikrotik-bot
-pm2 stop mikrotik-bot
-```
+  * ✅ Notifikasi saat MikroTik online.
+  * 🔴 Notifikasi saat MikroTik offline.
+  * 📝 Log baru pada router.
+  * 📡 Monitoring TX/RX bandwidth.
+  * 🚨 Peringatan jika bandwidth penuh.
+  * ⚠️ Peringatan jika CPU melebihi batas threshold.
 
 ---
 
-## 🎨 Customisasi & Personalisasi
-
-* ✏️ **Pesan Embed:** Edit teks, emoji, warna pada `index.js`.
-* 🕒 **Interval Waktu:** Ubah di `.env` → `CHECK_INTERVAL` & `LOG_POLL_INTERVAL`.
-* 🌏 **Zona Waktu:** Default `Asia/Jakarta`. Ubah fungsi waktu lokal jika perlu.
-
----
-
-## 🛡️ Keamanan
-
-* 🔒 Gunakan akun MikroTik khusus untuk monitoring dengan akses terbatas.
-* 🔐 Batasi akses channel Discord hanya untuk admin atau role tertentu.
-
----
-
-## 📞 Kontak & Support
-
-* 💬 Discord: notmoonn
+⭐ **Star repo ini jika bermanfaat untukmu!** ⭐
