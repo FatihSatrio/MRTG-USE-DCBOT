@@ -1,4 +1,3 @@
-// index.js
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
@@ -12,7 +11,6 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    // aktifkan kalau mau command teks "!backup-now"
     GatewayIntentBits.MessageContent
   ]
 });
