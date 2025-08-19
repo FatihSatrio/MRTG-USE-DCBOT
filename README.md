@@ -65,17 +65,17 @@ MIKROTIK_FTP_PORT=21
 
 # === Monitoring Settings ===
 MONITOR_INTERFACE=interface_name
-MAX_BANDWIDTH_MBPS=100
-CPU_THRESHOLD=70
+MAX_BANDWIDTH_MBPS=100            # dalam Mbps
+CPU_THRESHOLD=70                  # % CPU
 
 CHECK_INTERVAL=10000              # interval cek status (ms)
-LOG_POLL_INTERVAL=15000           # interval polling log (ms)
+LOG_POLL_INTERVAL=10000           # interval polling log (ms)
 IDENTITY_REFRESH_INTERVAL=60000   # interval refresh identity (ms)
 
 # === Backup Settings ===
-BACKUP_NAME_PREFIX=mikrotik-backup
+BACKUP_NAME_PREFIX=backup
 BACKUP_DIR=./backups
-BACKUP_PASSWORD=optional_password_for_.backup
+BACKUP_PASSWORD=optional_password_for_.backup # bisa dikosongkan jika tidak menggunakan password
 
 # Cron expression (default setiap jam 12 malam WIB)
 BACKUP_CRON=0 0 * * *
