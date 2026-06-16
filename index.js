@@ -103,8 +103,8 @@ async function connectMikrotik() {
 
   mikrotikConnection.on('error', async (err) => {
     console.error('MikroTik connection error:', err);
-    console.log('Attempting to reconnect in 5 seconds...');
-    setTimeout(connectMikrotik, 5000);
+    console.log('Attempting to reconnect in 5 minutes...');
+    setTimeout(connectMikrotik, 300000);
   });
 
   try {
