@@ -19,7 +19,7 @@ let mikrotikConnection;
 let mikrotikStatus = 'unknown';
 let mikrotikIdentity = 'Unknown Identity';
 let monitoringChannel, logChannel, systemLogChannel, bandwidthChannel, backupChannel;
-let lastLogTime = null;
+let lastLogId = null;
 let isBackupRunning = false;
 
 const mentionUsers = process.env.DISCORD_MENTION_USER_IDS
@@ -103,8 +103,8 @@ async function connectMikrotik() {
 
   mikrotikConnection.on('error', async (err) => {
     console.error('MikroTik connection error:', err);
-    console.log('Attempting to reconnect in 5 minutes...');
-    setTimeout(connectMikrotik, 300000);
+    console.log('Attempting to reconnect in 5 seconds...');
+    setTimeout(connectMikrotik, 5000);
   });
 
   try {
@@ -113,7 +113,7 @@ async function connectMikrotik() {
     await fetchIdentity();
   } catch (err) {
     console.error('Failed to connect to MikroTik:', err);
-    setTimeout(connectMikrotik, 300000);
+    setTimeout(connectMikrotik, 5000);
   }
 }
 
@@ -258,44 +258,72 @@ async function monitorBandwidth() {
 }
 
 /* ===================== Log MikroTik ===================== */
+async function initializeLogTracker() {
+  try {
+    const logs = await mikrotikConnection.write('/log/print');
+
+    if (logs.length > 0) {
+      lastLogId = logs[logs.length - 1]['.id'];
+      console.log(`📌 Last log ID initialized: ${lastLogId}`);
+    }
+  } catch (err) {
+    console.error('Failed to initialize log tracker:', err);
+  }
+}
+
 async function pollLogs() {
   if (!mikrotikConnection?.connected) return;
 
   try {
     const logs = await mikrotikConnection.write('/log/print');
-    let newLogs = [];
 
-    for (const logEntry of logs) {
-      const logTime = logEntry.time;
-      if (!logTime) continue;
+    if (!logs.length) return;
 
-      const [hours, minutes, seconds] = logTime.split(':').map(Number);
-      const logSeconds = hours * 3600 + minutes * 60 + seconds;
-
-      if (!lastLogTime || logSeconds > lastLogTime) newLogs.push(logEntry);
+    if (!lastLogId) {
+      lastLogId = logs[logs.length - 1]['.id'];
+      return;
     }
 
-    if (newLogs.length > 0) {
-      const latestLog = newLogs[newLogs.length - 1];
-      const [h, m, s] = latestLog.time.split(':').map(Number);
-      lastLogTime = h * 3600 + m * 60 + s;
+    const newLogs = [];
+    let foundLastLog = false;
 
-      newLogs.forEach(logEntry => {
-        const embed = new EmbedBuilder()
-          .setTitle('📝 MikroTik Log Entry')
-          .addFields(
-            { name: '🏷️ Identity', value: mikrotikIdentity, inline: true },
-            { name: '📅 Tanggal Lokal', value: getLocalDateTime(), inline: true },
-            { name: '🕐 Waktu Router', value: logEntry.time || 'Unknown', inline: true },
-            { name: '🏷️ Topics', value: `\`${logEntry.topics || 'No Topic'}\``, inline: false },
-            { name: '💬 Message', value: `\`\`\`${logEntry.message || 'No Message'}\`\`\`` , inline: false }
-          )
-          .setColor(getLogColor(logEntry.topics))
-          .setTimestamp();
+    for (const logEntry of logs) {
+      if (foundLastLog) {
+        newLogs.push(logEntry);
+      }
 
-        if (logEntry.topics?.includes('system')) systemLogChannel.send({ content: `${mentionUsers}`, embeds: [embed] });
-        logChannel.send({ embeds: [embed] });
-      });
+      if (logEntry['.id'] === lastLogId) {
+        foundLastLog = true;
+      }
+    }
+
+    if (!newLogs.length) return;
+
+    lastLogId = logs[logs.length - 1]['.id'];
+
+    for (const logEntry of newLogs) {
+      const embed = new EmbedBuilder()
+        .setTitle('📝 MikroTik Log Entry')
+        .addFields(
+          { name: '🏷️ Identity', value: mikrotikIdentity, inline: true },
+          { name: '📅 Tanggal Lokal', value: getLocalDateTime(), inline: true },
+          { name: '🕐 Waktu Router', value: logEntry.time || 'Unknown', inline: true },
+          { name: '🏷️ Topics', value: `\`${logEntry.topics || 'No Topic'}\``, inline: false },
+          { name: '💬 Message', value: `\`\`\`${logEntry.message || 'No Message'}\`\`\``, inline: false }
+        )
+        .setColor(getLogColor(logEntry.topics))
+        .setTimestamp();
+
+      if (logEntry.topics?.includes('system')) {
+        await systemLogChannel.send({
+          content: mentionUsers || undefined,
+          embeds: [embed]
+        });
+      } else {
+        await logChannel.send({
+          embeds: [embed]
+        });
+      }
     }
   } catch (err) {
     console.error('pollLogs error:', err);
@@ -462,7 +490,8 @@ client.once('ready', async () => {
   global.__BACKUP_DIR__ = backupDir;
   console.log('📁 Folder backup lokal:', backupDir);
 
-  await connectMikrotik();
+await connectMikrotik();
+await initializeLogTracker();
 
   setInterval(monitorMikrotik, parseInt(process.env.CHECK_INTERVAL));
   setInterval(pollLogs, parseInt(process.env.LOG_POLL_INTERVAL));
