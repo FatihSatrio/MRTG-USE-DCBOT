@@ -113,7 +113,7 @@ async function connectMikrotik() {
     await fetchIdentity();
   } catch (err) {
     console.error('Failed to connect to MikroTik:', err);
-    setTimeout(connectMikrotik, 5000);
+    setTimeout(connectMikrotik, 300000);
   }
 }
 
